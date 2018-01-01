@@ -14,8 +14,8 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.components.binary_sensor import (
     BinarySensorDevice, PLATFORM_SCHEMA)
 from homeassistant.const import (
-    CONF_ABOVE, CONF_BELOW, CONF_DEVICE_CLASS, CONF_ENTITY_ID, CONF_NAME,
-    CONF_PLATFORM, CONF_STATE, STATE_UNKNOWN)
+    ATTR_FRIENDLY_NAME, CONF_ABOVE, CONF_BELOW, CONF_DEVICE_CLASS,
+    CONF_ENTITY_ID, CONF_PLATFORM, CONF_SENSORS, CONF_STATE, STATE_UNKNOWN)
 from homeassistant.core import callback
 from homeassistant.helpers import condition
 from homeassistant.helpers.event import async_track_state_change
@@ -53,8 +53,8 @@ STATE_SCHEMA = vol.Schema({
     vol.Optional(CONF_P_GIVEN_F): vol.Coerce(float)
 }, required=True)
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+SENSOR_SCHEMA = vol.Schema({
+    vol.Optional(ATTR_FRIENDLY_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_DEVICE_CLASS): cv.string,
     vol.Required(CONF_OBSERVATIONS):
         vol.Schema(vol.All(cv.ensure_list,
@@ -62,6 +62,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_PRIOR): vol.Coerce(float),
     vol.Optional(CONF_PROBABILITY_THRESHOLD,
                  default=DEFAULT_PROBABILITY_THRESHOLD): vol.Coerce(float),
+})
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
+    vol.Required(CONF_SENSORS): vol.Schema({cv.slug: SENSOR_SCHEMA}),
 })
 
 
@@ -76,18 +80,27 @@ def update_probability(prior, prob_true, prob_false):
 
 @asyncio.coroutine
 def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
-    """Set up the Bayesian Binary sensor."""
-    name = config.get(CONF_NAME)
-    observations = config.get(CONF_OBSERVATIONS)
-    prior = config.get(CONF_PRIOR)
-    probability_threshold = config.get(CONF_PROBABILITY_THRESHOLD)
-    device_class = config.get(CONF_DEVICE_CLASS)
+    """Set up the Bayesian Binary sensors."""
+    sensors = []
 
-    async_add_devices([
-        BayesianBinarySensor(
-            name, prior, observations, probability_threshold, device_class)
-    ], True)
+    for device, device_config in config[CONF_SENSORS].items():
+        friendly_name = device_config.get(ATTR_FRIENDLY_NAME, device)
+        observations = device_config.get(CONF_OBSERVATIONS)
+        prior = device_config.get(CONF_PRIOR)
+        probability_threshold = device_config.get(CONF_PROBABILITY_THRESHOLD)
+        device_class = device_config.get(CONF_DEVICE_CLASS)
 
+        sensors.append(
+            BayesianBinarySensor(
+                friendly_name, prior, observations, probability_threshold,
+                device_class)
+            )
+    if not sensors:
+        _LOGGER.error("No sensors added")
+        return False
+
+    async_add_devices(sensors)
+    return True
 
 class BayesianBinarySensor(BinarySensorDevice):
     """Representation of a Bayesian sensor."""

@@ -22,26 +22,25 @@ class TestBayesianBinarySensor(unittest.TestCase):
         """Test sensor on numeric state platform observations."""
         config = {
             'binary_sensor': {
-                'platform':
-                'bayesian',
-                'name':
-                'Test_Binary',
-                'observations': [{
-                    'platform': 'numeric_state',
-                    'entity_id': 'sensor.test_monitored',
-                    'below': 10,
-                    'above': 5,
-                    'prob_given_true': 0.6
-                }, {
-                    'platform': 'numeric_state',
-                    'entity_id': 'sensor.test_monitored1',
-                    'below': 7,
-                    'above': 5,
-                    'prob_given_true': 0.9,
-                    'prob_given_false': 0.1
-                }],
-                'prior':
-                0.2,
+                'platform': 'bayesian',
+                'sensors': [{
+                    'name': 'Test_Binary',
+                    'observations': [{
+                        'platform': 'numeric_state',
+                        'entity_id': 'sensor.test_monitored',
+                        'below': 10,
+                        'above': 5,
+                        'prob_given_true': 0.6
+                    }, {
+                        'platform': 'numeric_state',
+                        'entity_id': 'sensor.test_monitored1',
+                        'below': 7,
+                        'above': 5,
+                        'prob_given_true': 0.9,
+                        'prob_given_false': 0.1
+                    }],
+                    'prior': 0.2
+                }]
             }
         }
 
